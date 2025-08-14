@@ -1,7 +1,7 @@
 body {
     background-color: #f8f9fa;
-    padding-top: 70px;
-    /* Space for fixed navbar */
+    margin-top: 0 !important;
+    padding-top: 0 !important;
 }
 
 h1,
@@ -24,10 +24,16 @@ h2 {
 }
 
 .navbar {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.navbar.fixed-top {
     position: fixed;
     top: 0;
-    width: 100%;
-    z-index: 1000;
+    left: 0;
+    right: 0;
+    z-index: 1030; /* above most content */
 }
 
 .navbar-brand {
