@@ -181,7 +181,18 @@ app.get('/logout', (req, res) => {
 // Search tools
 app.get('/search', (req, res) => {
     const { query } = req.query;
-    db.query('SELECT * FROM tools WHERE title LIKE ? OR description LIKE ?', [`%${query}%`, `%${query}%`], (err, results) => {
+    const searchQuery = `
+    SELECT t.*, i.image_path 
+    FROM tools t 
+    LEFT JOIN (
+      SELECT tool_id, MIN(id) as min_id 
+      FROM tool_images 
+      GROUP BY tool_id
+    ) sub ON t.id = sub.tool_id 
+    LEFT JOIN tool_images i ON sub.min_id = i.id 
+    WHERE t.title LIKE ? OR t.description LIKE ?
+  `;
+    db.query(searchQuery, [`%${query}%`, `%${query}%`], (err, results) => {
         if (err) return res.status(500).send('Error searching tools');
         res.render('search_results', { tools: results, query, user: req.user });
     });

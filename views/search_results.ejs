@@ -24,13 +24,24 @@
                 <h2>Results</h2>
                 <ul class="list-group">
                     <% tools.forEach(tool=> { %>
-                        <li class="list-group-item">
-                            <a href="/tool/<%= tool.id %>">
-                                <%= tool.title %>
-                            </a>
-                            <p>
-                                <%= tool.description ? tool.description.substring(0, 100) + '...' : 'No description' %>
-                            </p>
+                        <li class="list-group-item d-flex align-items-start">
+                            <% if (tool.image_path) { %>
+                                <img src="/<%= tool.image_path %>" class="img-thumbnail me-3"
+                                    style="width: 100px; height: 100px; object-fit: cover;" alt="Tool Image">
+                                <% } else { %>
+                                    <div class="placeholder me-3"
+                                        style="width: 100px; height: 100px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #6c757d;">
+                                        No Image</div>
+                                    <% } %>
+                                        <div>
+                                            <a href="/tool/<%= tool.id %>">
+                                                <%= tool.title %>
+                                            </a>
+                                            <p>
+                                                <%= tool.description ? tool.description.substring(0, 100) + '...'
+                                                    : 'No description' %>
+                                            </p>
+                                        </div>
                         </li>
                         <% }); %>
                 </ul>
