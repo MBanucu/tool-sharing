@@ -161,9 +161,9 @@ app.post('/login', (req, res) => {
         res.cookie('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',    // or 'strict' depending on your flows
+            sameSite: 'lax',
             maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-        })
+        });
         res.json({ ok: true });
     });
 });
