@@ -102,7 +102,7 @@ const transporter = nodemailer.createTransport({
 
 // Middleware to check user authentication
 const checkUser = (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1] || req.query.token;
+    const token = req.cookies.token;
     if (token) {
         jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
             if (!err) {
@@ -115,6 +115,7 @@ const checkUser = (req, res, next) => {
     }
 };
 
+app.use(require('cookie-parser')());
 // Apply checkUser to all routes
 app.use(checkUser);
 
@@ -157,8 +158,24 @@ app.post('/login', (req, res) => {
         const match = await bcrypt.compare(password, results[0].password_hash);
         if (!match) return res.status(400).send('Invalid password');
         const token = jwt.sign({ id: results[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token });
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',    // or 'strict' depending on your flows
+            maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+        })
+        res.json({ ok: true });
     });
+});
+
+app.get('/logout', (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+    });
+    req.user = undefined;
+    res.redirect('/');
 });
 
 // Search tools
