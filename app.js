@@ -8,6 +8,7 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const dotenv = require('dotenv');
+const fs = require('fs');
 
 dotenv.config();
 
@@ -234,17 +235,46 @@ app.post('/upload', (req, res, next) => {
 });
 
 // Delete tool (authenticated)
-app.delete('/delete/:id', (req, res) => {
+app.delete('/delete/:id', async (req, res) => {
     if (!req.user) return res.status(401).send('Unauthorized');
     const toolId = req.params.id;
-    db.query('SELECT user_id FROM tools WHERE id = ?', [toolId], (err, results) => {
-        if (err || results.length === 0) return res.status(404).send('Tool not found');
-        if (results[0].user_id !== req.user.id) return res.status(403).send('Unauthorized to delete this tool');
-        db.query('DELETE FROM tools WHERE id = ?', [toolId], (err) => {
-            if (err) return res.status(500).send('Error deleting tool');
-            res.json({ ok: true });
-        });
-    });
+
+    try {
+        // Check ownership and fetch tool details
+        const [toolResults] = await db.promise().query('SELECT user_id, user_manual_path FROM tools WHERE id = ?', [toolId]);
+        if (toolResults.length === 0) return res.status(404).send('Tool not found');
+        if (toolResults[0].user_id !== req.user.id) return res.status(403).send('Unauthorized to delete this tool');
+
+        // Delete manual file if it exists
+        if (toolResults[0].user_manual_path) {
+            const manualPath = path.join(__dirname, 'public', toolResults[0].user_manual_path);
+            try {
+                fs.access(manualPath); // Check if file exists
+                fs.unlink(manualPath);
+            } catch (err) {
+                console.warn('Manual file not found or could not be deleted:', err.message);
+            }
+        }
+
+        // Fetch and delete image files
+        const [imageResults] = await db.promise().query('SELECT image_path FROM tool_images WHERE tool_id = ?', [toolId]);
+        for (const image of imageResults) {
+            const imagePath = path.join(__dirname, 'public', image.image_path);
+            try {
+                fs.access(imagePath); // Check if file exists
+                fs.unlink(imagePath);
+            } catch (err) {
+                console.warn('Image file not found or could not be deleted:', err.message);
+            }
+        }
+
+        // Delete the tool from the database
+        await db.promise().query('DELETE FROM tools WHERE id = ?', [toolId]);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Error deleting tool:', err);
+        res.status(500).send('Error deleting tool');
+    }
 });
 
 // Frontend routes
