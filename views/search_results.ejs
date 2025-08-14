@@ -33,7 +33,7 @@
                                         style="width: 100px; height: 100px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #6c757d;">
                                         No Image</div>
                                     <% } %>
-                                        <div>
+                                        <div class="flex-grow-1">
                                             <a href="/tool/<%= tool.id %>">
                                                 <%= tool.title %>
                                             </a>
@@ -42,9 +42,14 @@
                                                     : 'No description' %>
                                             </p>
                                         </div>
+                                        <% if (user && user.id===tool.user_id) { %>
+                                            <button class="btn btn-danger btn-sm ms-2"
+                                                onclick="deleteTool(<%= tool.id %>)">Delete</button>
+                                            <% } %>
                         </li>
                         <% }); %>
                 </ul>
+                <script src="/js/main.js"></script>
 </body>
 
 </html>

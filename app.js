@@ -233,6 +233,20 @@ app.post('/upload', (req, res, next) => {
         });
 });
 
+// Delete tool (authenticated)
+app.delete('/delete/:id', (req, res) => {
+    if (!req.user) return res.status(401).send('Unauthorized');
+    const toolId = req.params.id;
+    db.query('SELECT user_id FROM tools WHERE id = ?', [toolId], (err, results) => {
+        if (err || results.length === 0) return res.status(404).send('Tool not found');
+        if (results[0].user_id !== req.user.id) return res.status(403).send('Unauthorized to delete this tool');
+        db.query('DELETE FROM tools WHERE id = ?', [toolId], (err) => {
+            if (err) return res.status(500).send('Error deleting tool');
+            res.json({ ok: true });
+        });
+    });
+});
+
 // Frontend routes
 app.get('/', (req, res) => res.render('search_results', { tools: [], query: '', user: req.user }));
 app.get('/register', (req, res) => res.render('register', { user: req.user }));
