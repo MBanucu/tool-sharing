@@ -1,0 +1,40 @@
+body {
+    background-color: #f8f9fa;
+    padding-top: 70px;
+    /* Space for fixed navbar */
+}
+
+h1,
+h2 {
+    color: #343a40;
+}
+
+.list-group-item a {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.list-group-item a:hover {
+    color: #0056b3;
+}
+
+.img-fluid {
+    max-height: 200px;
+    object-fit: cover;
+}
+
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.nav-item .btn {
+    margin: 0 5px;
+}
