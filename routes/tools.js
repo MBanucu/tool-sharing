@@ -39,6 +39,34 @@ module.exports = (db, app) => {
         res.render('search_results', { tools: results, query, user: req.user });
     });
 
+    // Search users by email
+    app.get('/search/users', async (req, res) => {
+        const { query } = req.query;
+        const [results] = await db.query('SELECT id, email FROM users WHERE email LIKE ?', [`%${query}%`]);
+        res.render('search_users', { users: results, query, user: req.user });
+    });
+
+    // User details (list tools by user)
+    app.get('/users/:id', async (req, res) => {
+        const userId = req.params.id;
+        const [userResult] = await db.query('SELECT id, email FROM users WHERE id = ?', [userId]);
+        if (userResult.length === 0) return res.status(404).send('User not found');
+
+        const searchQuery = `
+            SELECT t.*, i.image_path 
+            FROM tools t 
+            LEFT JOIN (
+                SELECT tool_id, MIN(id) as min_id 
+                FROM tool_images 
+                GROUP BY tool_id
+            ) sub ON t.id = sub.tool_id 
+            LEFT JOIN tool_images i ON sub.min_id = i.id 
+            WHERE t.user_id = ?
+        `;
+        const [tools] = await db.query(searchQuery, [userId]);
+        res.render('user_details', { user: userResult[0], tools, currentUser: req.user });
+    });
+
     // Tool details
     app.get('/tool/:id', async (req, res) => {
         const { id } = req.params;
