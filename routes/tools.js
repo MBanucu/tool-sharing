@@ -5,7 +5,14 @@ const fs = require('fs').promises;
 
 module.exports = (db, app) => {
     const storage = multer.diskStorage({
-        destination: (req, file, cb) => {
+        destination: async (req, file, cb) => {
+            const uploadPath = path.join(__dirname, '..', 'public', 'uploads');
+            try {
+                await fs.access(uploadPath);
+            } catch (err) {
+                await fs.mkdir(uploadPath, { recursive: true });
+                console.log('Created uploads directory:', uploadPath);
+            }
             cb(null, 'public/uploads/');
         },
         filename: (req, file, cb) => {
