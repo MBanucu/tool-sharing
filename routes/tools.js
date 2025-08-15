@@ -2,6 +2,58 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
+const sharp = require('sharp');
+
+async function checkFileExists(filePath) {
+    try {
+        await fs.access('public/' + filePath);
+        return true; // File exists
+    } catch {
+        return false; // File does not exist
+    }
+}
+
+function getThumbnailPath(originalPath) {
+    const filename = path.basename(originalPath);
+    return path.join(path.dirname(originalPath), `thumb_${filename}`);
+}
+
+// function getImagePathsFromServerPath(originalPath) {
+//     const thumbnailPath = getThumbnailPath(originalPath);
+
+//     const originalPathDisk = path.join(__dirname, '..', 'public', originalPath);
+//     const thumbnailPathDisk = getThumbnailPath(originalPathDisk);
+
+//     return {
+//         originalPath: originalPath,
+//         thumbnailPath: thumbnailPath,
+//         originalPathDisk: originalPathDisk,
+//         thumbnailPathDisk: thumbnailPathDisk
+//     };
+// }
+
+// function getImagePathsFromDiskPath(originalPathDisk) {
+
+// }
+
+async function createThumbnail(originalPath) {
+    const thumbnailPath = getThumbnailPath(originalPath);
+    await sharp('public/' + originalPath)
+        .resize(200, 200, { fit: 'cover' })
+        .toFormat('jpeg', { quality: 80 })
+        .toFile('public/' + thumbnailPath);
+}
+
+async function checkThumbnail(originalPath) {
+    const thumbnailPath = getThumbnailPath(originalPath);
+
+    if (await checkFileExists(thumbnailPath)) {
+        return thumbnailPath;
+    }
+
+    await createThumbnail(originalPath);
+    return thumbnailPath;
+}
 
 module.exports = (db, app) => {
     const storage = multer.diskStorage({
@@ -36,6 +88,9 @@ module.exports = (db, app) => {
             WHERE t.title LIKE ? OR t.description LIKE ?
         `;
         const [results] = await db.query(searchQuery, [`%${query}%`, `%${query}%`]);
+        for (const tool of results) {
+            tool.image_path = await checkThumbnail(tool.image_path);
+        }
         res.render('search_results', { tools: results, query, user: req.user });
     });
 
@@ -64,6 +119,9 @@ module.exports = (db, app) => {
             WHERE t.user_id = ?
         `;
         const [tools] = await db.query(searchQuery, [userId]);
+        for (const tool of tools) {
+            tool.image_path = await checkThumbnail(tool.image_path);
+        }
         res.render('user_details', { user: userResult[0], tools, currentUser: req.user });
     });
 
@@ -86,13 +144,18 @@ module.exports = (db, app) => {
         const [result] = await db.query('INSERT INTO tools (title, description, location, user_manual_path, user_id) VALUES (?, ?, ?, ?, ?)',
             [title, description, location, manualPath, req.user.id]);
         const toolId = result.insertId;
+
         if (req.files['images']) {
-            const imageInserts = req.files['images'].map(file => [toolId, file.path.replace('public/', '')]);
+            const imageInserts = [];
+            for (const file of req.files['images']) {
+                const originalPath = file.path;
+                await createThumbnail(originalPath.replace('public/', ''));
+
+                imageInserts.push([toolId, originalPath.replace('public/', '')]); // Store original path
+            }
             await db.query('INSERT INTO tool_images (tool_id, image_path) VALUES ?', [imageInserts]);
-            res.redirect('/search');
-        } else {
-            res.redirect('/search');
         }
+        res.redirect('/search');
     });
 
     // Delete tool (authenticated)
@@ -120,10 +183,19 @@ module.exports = (db, app) => {
             // Fetch and delete image files
             const [imageResults] = await db.execute('SELECT image_path FROM tool_images WHERE tool_id = ?', [toolId]);
             for (const image of imageResults) {
-                const imagePath = path.join(__dirname, '..', 'public', image.image_path);
+                const imagePath = path.join('public', image.image_path);
                 try {
                     await fs.access(imagePath);
                     await fs.unlink(imagePath);
+                } catch (err) {
+                    console.warn('Image file not found or could not be deleted:', err.message);
+                }
+                const filename = path.basename(imagePath);
+                const thumbnailPath = getThumbnailPath(image.image_path);
+                const thumbnailPathDisk = path.join('public', thumbnailPath);
+                try {
+                    await fs.access(thumbnailPathDisk);
+                    await fs.unlink(thumbnailPathDisk);
                 } catch (err) {
                     console.warn('Image file not found or could not be deleted:', err.message);
                 }
