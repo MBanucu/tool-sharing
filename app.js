@@ -31,12 +31,6 @@ app.set('port', port); // Set port for use in routes
         require('./routes/auth')(db, app);
         require('./routes/tools')(db, app);
 
-        // app.use('/', indexRoutes);
-        // app.use('/auth', authRoutes);
-        // app.use('/tools', toolRoutes);
-        // app.use('/', authRoutes);
-        // app.use('/', toolRoutes);
-
         // Frontend routes
         app.get('/', (req, res) => res.render('search_results', { tools: [], query: '', user: req.user }));
         app.get('/register', (req, res) => res.render('register', { user: req.user }));
