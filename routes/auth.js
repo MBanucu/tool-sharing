@@ -56,4 +56,14 @@ module.exports = (db, app) => {
         });
         res.json({ ok: true });
     });
+
+    app.get('/logout', (req, res) => {
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        });
+        req.user = undefined;
+        res.redirect('/');
+    });
 };
