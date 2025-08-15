@@ -41,7 +41,7 @@ app.set('port', port); // Set port for use in routes
         });
 
         app.listen(port, () => {
-            console.log(`Server running on http://localhost:${port}`);
+            console.log(`Server running on http://${process.env.SERVER_HOST}:${port}`);
         });
     } catch (err) {
         console.error('Failed to start server:', err);

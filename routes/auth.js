@@ -24,7 +24,7 @@ module.exports = (db, app) => {
             await transporter.sendMail({
                 to: email,
                 subject: 'Verify Your Email',
-                html: `<a href="http://localhost:${req.app.get('port')}/verify?token=${token}">Verify Email</a>`
+                html: `<a href="http://${process.env.SERVER_HOST}:${req.app.get('port')}/verify?token=${token}">Verify Email</a>`
             });
             res.send('Verification email sent');
         } catch (err) {
