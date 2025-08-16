@@ -142,7 +142,7 @@ module.exports = (db, app) => {
         if (toolResults.length === 0) return res.status(404).send('Tool not found');
         const [imageResults] = await db.query('SELECT image_path FROM tool_images WHERE tool_id = ?', [id]);
         for (const image of imageResults) {
-            image.image_path = await checkPreview(image.image_path);
+            image.image_path_preview = await checkPreview(image.image_path);
         }
         res.render('tool_details', { tool: toolResults, images: imageResults, user: req.user });
     });
