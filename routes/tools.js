@@ -6,7 +6,7 @@ const sharp = require('sharp');
 
 async function checkFileExists(filePath) {
     try {
-        await fs.access('public/' + filePath);
+        await fs.access(path.join('public', filePath));
         return true; // File exists
     } catch {
         return false; // File does not exist
@@ -38,7 +38,7 @@ function getThumbnailPath(originalPath) {
 
 async function createThumbnail(originalPath) {
     const thumbnailPath = getThumbnailPath(originalPath);
-    await sharp('public/' + originalPath)
+    await sharp(path.join('public', originalPath))
         .resize(200, 200, { fit: 'cover' })
         .toFormat('jpeg', { quality: 80 })
         .toFile('public/' + thumbnailPath);
