@@ -13,35 +13,34 @@ async function checkFileExists(filePath) {
     }
 }
 
-function getThumbnailPath(originalPath) {
-    const filename = path.basename(originalPath);
-    return path.join(path.dirname(originalPath), `thumb_${filename}`);
+function getPostfixPath(originalPath, postfix) {
+    const ext = path.extname(originalPath); // Get the file extension (e.g., '.jpg')
+    const filename = path.basename(originalPath, ext); // Get the filename without extension (e.g., 'image')
+    return path.join(path.dirname(originalPath), `${filename}_${postfix}${ext}`);
 }
 
-// function getImagePathsFromServerPath(originalPath) {
-//     const thumbnailPath = getThumbnailPath(originalPath);
+function getThumbnailPath(originalPath) {
+    return getPostfixPath(originalPath, 'thumb');
+}
 
-//     const originalPathDisk = path.join(__dirname, '..', 'public', originalPath);
-//     const thumbnailPathDisk = getThumbnailPath(originalPathDisk);
-
-//     return {
-//         originalPath: originalPath,
-//         thumbnailPath: thumbnailPath,
-//         originalPathDisk: originalPathDisk,
-//         thumbnailPathDisk: thumbnailPathDisk
-//     };
-// }
-
-// function getImagePathsFromDiskPath(originalPathDisk) {
-
-// }
+function getPreviewPath(originalPath) {
+    return getPostfixPath(originalPath, 'preview');
+}
 
 async function createThumbnail(originalPath) {
     const thumbnailPath = getThumbnailPath(originalPath);
     await sharp(path.join('public', originalPath))
         .resize(200, 200, { fit: 'cover' })
         .toFormat('jpeg', { quality: 80 })
-        .toFile('public/' + thumbnailPath);
+        .toFile(path.join('public', thumbnailPath));
+}
+
+async function createPreview(originalPath) {
+    const previewPath = getPreviewPath(originalPath);
+    await sharp(path.join('public', originalPath))
+        .resize(null, null, { fit: 'cover', height: 300, withoutEnlargement: true })
+        .toFormat('jpeg', { quality: 80 })
+        .toFile(path.join('public', previewPath));
 }
 
 async function checkThumbnail(originalPath) {
@@ -55,10 +54,21 @@ async function checkThumbnail(originalPath) {
     return thumbnailPath;
 }
 
+async function checkPreview(originalPath) {
+    const previewPath = getPreviewPath(originalPath);
+
+    if (await checkFileExists(previewPath)) {
+        return previewPath;
+    }
+
+    await createPreview(originalPath);
+    return previewPath;
+}
+
 module.exports = (db, app) => {
     const storage = multer.diskStorage({
         destination: async (req, file, cb) => {
-            const uploadPath = path.join(__dirname, '..', 'public', 'uploads');
+            const uploadPath = path.join('public', 'uploads');
             try {
                 await fs.access(uploadPath);
             } catch (err) {
@@ -131,6 +141,9 @@ module.exports = (db, app) => {
         const [toolResults] = await db.query('SELECT * FROM tools WHERE id = ?', [id]);
         if (toolResults.length === 0) return res.status(404).send('Tool not found');
         const [imageResults] = await db.query('SELECT image_path FROM tool_images WHERE tool_id = ?', [id]);
+        for (const image of imageResults) {
+            image.image_path = await checkPreview(image.image_path);
+        }
         res.render('tool_details', { tool: toolResults, images: imageResults, user: req.user });
     });
 
